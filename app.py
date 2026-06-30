@@ -39,34 +39,51 @@ def get_live_prices():
 current_usdt_krw, current_bmb_usdt, current_movn_usdt = get_live_prices()
 # -------------------------------------------------------------
 
+# 천 단위 쉼표를 붙여주는 변환 함수
+def format_with_commas(val_str):
+    clean = "".join(filter(str.isdigit, val_str))
+    if not clean:
+        return ""
+    return f"{int(clean):,}"
+
 st.divider()
 
 st.header("1. 투자 금액 및 현재 시세")
 col1, col2 = st.columns(2)
 
 with col1:
-    # format="%d" 설정을 넣어 입력창 안에서 천 단위 쉼표(,)가 찍히도록 만들었습니다.
-    krw_input = st.number_input(
-        "🚨 :red[**투자할 원화(KRW) 금액 [직접 입력]**]", 
-        min_value=0, 
-        value=1000000, 
-        step=100000,
-        format="%d"
-    )
+    # 1. 투자 원화 금액 처리 (기존 텍스트가 있으면 쉼표를 붙여서 기억)
+    if 'krw_raw' not in st.session_state:
+        st.session_state.krw_raw = "1,000,000"
+        
+    krw_text = st.text_input("🚨 :red[**투자할 원화(KRW) 금액 [직접 입력]**]", value=st.session_state.krw_raw)
+    formatted_krw = format_with_commas(krw_text)
+    
+    # 실시간으로 입력창 값을 쉼표 포맷으로 강제 변환
+    if formatted_krw != krw_text:
+        st.session_state.krw_raw = formatted_krw
+        st.rerun()
+        
+    # 실제 계산용 숫자 변환
+    krw_input = int(formatted_krw.replace(",", "")) if formatted_krw else 0
+
     usdt_krw = st.number_input("현재 원화 마켓 테더(USDT) 가격", min_value=1.0, value=current_usdt_krw, step=1.0)
 
 with col2:
     bmb_usdt_input = st.number_input("1 BMB 당 USDT 가격 (엘뱅크)", min_value=0.1, value=current_bmb_usdt, step=0.1)
     
-    # format="%d" 설정을 넣어 입력창 안에서 천 단위 쉼표(,)가 찍히도록 만들었습니다.
-    bmb_krw_input = st.number_input(
-        "🚨 :red[**1 BMB 당 원화 가격 (모빅매니아 시세) [직접 입력]**]", 
-        min_value=1000, 
-        value=200000,
-        step=1000,
-        format="%d",
-        help="현재 원화 직거래 가격을 직접 적어주세요."
-    )
+    # 2. 모빅매니아 원화 가격 처리
+    if 'bmb_krw_raw' not in st.session_state:
+        st.session_state.bmb_krw_raw = "200,000"
+        
+    bmb_krw_text = st.text_input("🚨 :red[**1 BMB 당 원화 가격 (모빅매니아 시세) [직접 입력]**]", value=st.session_state.bmb_krw_raw, help="현재 원화 직거래 가격을 직접 적어주세요.")
+    formatted_bmb_krw = format_with_commas(bmb_krw_text)
+    
+    if formatted_bmb_krw != bmb_krw_text:
+        st.session_state.bmb_krw_raw = formatted_bmb_krw
+        st.rerun()
+        
+    bmb_krw_input = int(formatted_bmb_krw.replace(",", "")) if formatted_bmb_krw else 1000
     
     movn_usdt = st.number_input("1 Movn 당 USDT 가격 (BSC 기반)", min_value=0.001, value=current_movn_usdt, format="%.4f", step=0.001)
     bmb_movn_ratio = st.number_input("1 BMB 당 필요한 Movn 개수", min_value=0.1, value=132.2, step=0.1)
@@ -105,8 +122,11 @@ st.divider()
 st.subheader("📋 내 자금 기준 예상 획득 수량")
 res_col1, res_col2, res_col3 = st.columns(3)
 with res_col1:
-    st.info(f"**USDT 직구매 시**\n\n**{(krw_input / bmb_price_krw_via_usdt):.4f} BMB**")
+    val1 = (krw_input / bmb_price_krw_via_usdt) if bmb_price_krw_via_usdt > 0 else 0
+    st.info(f"**USDT 직구매 시**\n\n**{val1:.4f} BMB**")
 with res_col2:
-    st.info(f"**Movn 스왑 시**\n\n**{(krw_input / bmb_price_krw_via_movn):.4f} BMB**")
+    val2 = (krw_input / bmb_price_krw_via_movn) if bmb_price_krw_via_movn > 0 else 0
+    st.info(f"**Movn 스왑 시**\n\n**{val2:.4f} BMB**")
 with res_col3:
-    st.info(f"**원화 직구매 시**\n\n**{(krw_input / bmb_price_krw_direct):.4f} BMB**")
+    val3 = (krw_input / bmb_price_krw_direct) if bmb_price_krw_direct > 0 else 0
+    st.info(f"**원화 직구매 시**\n\n**{val3:.4f} BMB**")
