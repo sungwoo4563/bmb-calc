@@ -4,13 +4,14 @@ import requests
 st.set_page_config(page_title="BMB 매수 경로 비교 계산기", layout="centered")
 
 st.title("📊 BMB 실시간 최적 매수 경로 계산기")
-st.write("실시간 시세와 직접 입력한 시세를 비교하여 가장 유리한 BMB 매수 경로를 찾습니다.")
+st.write("각 플랫폼의 실시간 시세와 직접 입력한 원화 시세를 비교하여 최적의 매수 경로를 도출합니다.")
 
 # -------------------------------------------------------------
-# [안정적인 실시간 시세 데이터 수집 함수]
+# [업비트, 엘뱅크, 유니스왑 실시간 시세 데이터 통합 수집 함수]
 # -------------------------------------------------------------
-@st.cache_data(ttl=15)
-def get_live_prices():
+@st.cache_data(ttl=15)  # 15초마다 모든 플랫폼의 시세를 동시 갱신합니다.
+def get_all_live_prices():
+    # 1. 업비트 테더(USDT/KRW) 가격
     try:
         upbit_url = "https://api.upbit.com/v1/ticker?markets=KRW-USDT"
         upbit_res = requests.get(upbit_url, headers={"accept": "application/json"}).json()
@@ -18,6 +19,7 @@ def get_live_prices():
     except Exception:
         live_usdt_krw = 1550.0
 
+    # 2. 엘뱅크 BMB/USDT 가격
     try:
         lbank_url = "https://api.lbkex.com/v1/ticker.do?symbol=bmb_usdt"
         lbank_res = requests.get(lbank_url).json()
@@ -25,7 +27,7 @@ def get_live_prices():
     except Exception:
         live_bmb_usdt = 129.6
         
-    # 유니스왑 Movn/USDT 가격 (GeckoTerminal API 활용 - BSC 네트워크)
+    # 3. 유니스왑 Movn/USDT 가격 (GeckoTerminal API 활용 - BSC 네트워크)
     try:
         network = "bsc"
         movn_contract_address = "0x200b63AA750c901892d4DCf82439860F9C270274"
@@ -37,7 +39,8 @@ def get_live_prices():
 
     return live_usdt_krw, live_bmb_usdt, live_movn_usdt
 
-current_usdt_krw, current_bmb_usdt, current_movn_usdt = get_live_prices()
+# 실시간 시세 로드
+current_usdt_krw, current_bmb_usdt, current_movn_usdt = get_all_live_prices()
 # -------------------------------------------------------------
 
 # 천 단위 쉼표를 붙여주는 변환 함수
@@ -53,6 +56,7 @@ st.header("1. 투자 금액 및 현재 시세")
 col1, col2 = st.columns(2)
 
 with col1:
+    # 1. 투자할 원화 금액 처리 (실시간 쉼표 변환 메커니즘)
     if 'krw_raw' not in st.session_state:
         st.session_state.krw_raw = "1,000,000"
         
@@ -65,11 +69,14 @@ with col1:
         
     krw_input = int(formatted_krw.replace(",", "")) if formatted_krw else 0
 
-    usdt_krw = st.number_input("현재 원화 마켓 테더(USDT) 가격", min_value=1.0, value=current_usdt_krw, step=1.0)
+    # 업비트 실시간 시세 반영
+    usdt_krw = st.number_input("현재 원화 마켓 테더(USDT) 가격 (업비트 실시간)", min_value=1.0, value=current_usdt_krw, step=1.0)
 
 with col2:
-    bmb_usdt_input = st.number_input("1 BMB 당 USDT 가격 (엘뱅크)", min_value=0.1, value=current_bmb_usdt, step=0.1)
+    # 엘뱅크 실시간 시세 반영
+    bmb_usdt_input = st.number_input("1 BMB 당 USDT 가격 (엘뱅크 실시간)", min_value=0.1, value=current_bmb_usdt, step=0.1)
     
+    # 2. 모빅매니아 원화 가격 처리 (실시간 쉼표 변환 메커니즘)
     if 'bmb_krw_raw' not in st.session_state:
         st.session_state.bmb_krw_raw = "200,000"
         
@@ -82,12 +89,12 @@ with col2:
         
     bmb_krw_input = int(formatted_bmb_krw.replace(",", "")) if formatted_bmb_krw else 1000
     
-    # Movn 가격을 유니스왑 실시간 가격으로 자동 연동합니다.
+    # 유니스왑 실시간 시세 반영
     movn_usdt = st.number_input("1 Movn 당 USDT 가격 (유니스왑 실시간)", min_value=0.001, value=current_movn_usdt, format="%.4f", step=0.001)
     bmb_movn_ratio = st.number_input("1 BMB 당 필요한 Movn 개수", min_value=0.1, value=132.2, step=0.1)
 
-info_text = f"테더: {current_usdt_krw}원 / 엘뱅크 BMB: {current_bmb_usdt} USDT / Movn: {current_movn_usdt:.4f} USDT"
-st.caption(f"🔄 **실시간 연동** | {info_text}")
+info_text = f"업비트 테더: {current_usdt_krw}원 / 엘뱅크 BMB: {current_bmb_usdt} USDT / 유니스왑 Movn: {current_movn_usdt:.4f} USDT"
+st.caption(f"🔄 **전 플랫폼 실시간 연동 중** | {info_text}")
 
 st.divider()
 
@@ -111,8 +118,8 @@ st.header("2. 경로별 비교 결과")
 st.success(f"💡 현재는 **[{best_route_name}]** 경로가 BMB 1개당 가장 저렴하고 유리합니다!")
 
 st.subheader("💰 BMB 1개당 실질 구매 비용 (원화)")
-st.metric(label="🟢 USDT 직구매 가격 (엘뱅크)", value=f"{int(bmb_price_krw_via_usdt):,} 원", delta=f"{bmb_usdt_input:.2f} USDT")
-st.metric(label="🔵 Movn 스왑시 가격 (유니스왑)", value=f"{int(bmb_price_krw_via_movn):,} 원", delta=f"{bmb_price_usdt_via_movn:.2f} USDT")
+st.metric(label="🟢 USDT 직구매 가격 (엘뱅크 실시간)", value=f"{int(bmb_price_krw_via_usdt):,} 원", delta=f"{bmb_usdt_input:.2f} USDT")
+st.metric(label="🔵 Movn 스왑시 가격 (유니스왑 실시간)", value=f"{int(bmb_price_krw_via_movn):,} 원", delta=f"{bmb_price_usdt_via_movn:.2f} USDT")
 st.metric(label="🟠 원화 직구매 가격 (모빅매니아 직접 입력)", value=f"{int(bmb_price_krw_direct):,} 원", delta=f"{(bmb_price_krw_direct/usdt_krw):.2f} USDT 환산")
 
 st.divider()
