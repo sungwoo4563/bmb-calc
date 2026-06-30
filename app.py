@@ -45,19 +45,26 @@ st.header("1. 투자 금액 및 현재 시세")
 col1, col2 = st.columns(2)
 
 with col1:
-    # [빨간색 강조 적용] 문구 자체를 붉은색으로 선명하게 고정합니다.
-    krw_input = st.number_input("🚨 :red[**투자할 원화(KRW) 금액 [직접 입력]**]", min_value=0, value=1000000, step=100000)
+    # format="%d" 설정을 넣어 입력창 안에서 천 단위 쉼표(,)가 찍히도록 만들었습니다.
+    krw_input = st.number_input(
+        "🚨 :red[**투자할 원화(KRW) 금액 [직접 입력]**]", 
+        min_value=0, 
+        value=1000000, 
+        step=100000,
+        format="%d"
+    )
     usdt_krw = st.number_input("현재 원화 마켓 테더(USDT) 가격", min_value=1.0, value=current_usdt_krw, step=1.0)
 
 with col2:
     bmb_usdt_input = st.number_input("1 BMB 당 USDT 가격 (엘뱅크)", min_value=0.1, value=current_bmb_usdt, step=0.1)
     
-    # [빨간색 강조 적용] 문구 자체를 붉은색으로 선명하게 고정합니다.
+    # format="%d" 설정을 넣어 입력창 안에서 천 단위 쉼표(,)가 찍히도록 만들었습니다.
     bmb_krw_input = st.number_input(
         "🚨 :red[**1 BMB 당 원화 가격 (모빅매니아 시세) [직접 입력]**]", 
         min_value=1000, 
         value=200000,
         step=1000,
+        format="%d",
         help="현재 원화 직거래 가격을 직접 적어주세요."
     )
     
