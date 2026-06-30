@@ -27,9 +27,9 @@ def get_all_live_prices():
     except Exception:
         live_bmb_usdt = 125.1
 
-    # 3. 유니스왑/팬케이크스왑 Movn/USDT 가격 (GeckoTerminal API 활용 - BSC 네트워크)
+    # 3. 유니스왑 Movn/USDT 가격 (GeckoTerminal API 활용 - BSC 네트워크)
     try:
-        network = "bsc"  # 네트워크를 bsc로 수정했습니다.
+        network = "bsc"
         movn_contract_address = "0x200b63AA750c901892d4DCf82439860F9C270274"
         
         uniswap_url = f"https://api.geckoterminal.com/api/v2/networks/{network}/tokens/{movn_contract_address}"
@@ -38,7 +38,6 @@ def get_all_live_prices():
         # BSC 체인의 풀에 형성된 실시간 달러(USDT) 가격 추출
         live_movn_usdt = float(uniswap_res['data']['attributes']['price_usd'])
     except Exception:
-        # 오류 시 기존 기준값을 기본으로 사용합니다.
         live_movn_usdt = 0.979
 
     return live_usdt_krw, live_bmb_usdt, live_movn_usdt
@@ -70,10 +69,16 @@ st.divider()
 
 # 계산 로직
 user_usdt = krw_input / usdt_krw
-bmb_via_usdt = user_usdt / bmb_usdt
 
+# 경로 A: USDT 직구매 시 BMB 1개당 비용 및 수량
+bmb_via_usdt = user_usdt / bmb_usdt
+bmb_price_krw_via_usdt = bmb_usdt * usdt_krw  # 직구매시 BMB 1개당 실질 원화 가격
+
+# 경로 B: Movn 스왑 시 BMB 1개당 비용 및 수량
 user_movn = user_usdt / movn_usdt
 bmb_via_movn = user_movn / bmb_movn_ratio
+bmb_price_usdt_via_movn = movn_usdt * bmb_movn_ratio
+bmb_price_krw_via_movn = bmb_price_usdt_via_movn * usdt_krw  # 스왑시 BMB 1개당 실질 원화 가격
 
 st.header("2. 경로별 비교 결과")
 
@@ -90,5 +95,6 @@ st.subheader("📋 상세 수치")
 st.dataframe({
     "구분": ["USDT 직구매 경로", "Movn 스왑 경로"],
     "확보 가능한 BMB 개수": [f"{bmb_via_usdt:.4f} BMB", f"{bmb_via_movn:.4f} BMB"],
-    "BMB 1개당 실질 비용": [f"{bmb_usdt:.2f} USDT", f"{(movn_usdt * bmb_movn_ratio):.2f} USDT"]
+    "BMB 1개당 비용 (USDT)": [f"{bmb_usdt:.2f} USDT", f"{bmb_price_usdt_via_movn:.2f} USDT"],
+    "BMB 1개당 실질 원화 가격": [f"{int(bmb_price_krw_via_usdt):,} 원", f"{int(bmb_price_krw_via_movn):,} 원"] # 원화 가격 실시간 추가
 }, use_container_width=True)
