@@ -25,6 +25,7 @@ def get_live_prices():
     except Exception:
         live_bmb_usdt = 129.6
         
+    # 유니스왑 Movn/USDT 가격 (GeckoTerminal API 활용 - BSC 네트워크)
     try:
         network = "bsc"
         movn_contract_address = "0x200b63AA750c901892d4DCf82439860F9C270274"
@@ -52,19 +53,16 @@ st.header("1. 투자 금액 및 현재 시세")
 col1, col2 = st.columns(2)
 
 with col1:
-    # 1. 투자 원화 금액 처리 (기존 텍스트가 있으면 쉼표를 붙여서 기억)
     if 'krw_raw' not in st.session_state:
         st.session_state.krw_raw = "1,000,000"
         
     krw_text = st.text_input("🚨 :red[**투자할 원화(KRW) 금액 [직접 입력]**]", value=st.session_state.krw_raw)
     formatted_krw = format_with_commas(krw_text)
     
-    # 실시간으로 입력창 값을 쉼표 포맷으로 강제 변환
     if formatted_krw != krw_text:
         st.session_state.krw_raw = formatted_krw
         st.rerun()
         
-    # 실제 계산용 숫자 변환
     krw_input = int(formatted_krw.replace(",", "")) if formatted_krw else 0
 
     usdt_krw = st.number_input("현재 원화 마켓 테더(USDT) 가격", min_value=1.0, value=current_usdt_krw, step=1.0)
@@ -72,7 +70,6 @@ with col1:
 with col2:
     bmb_usdt_input = st.number_input("1 BMB 당 USDT 가격 (엘뱅크)", min_value=0.1, value=current_bmb_usdt, step=0.1)
     
-    # 2. 모빅매니아 원화 가격 처리
     if 'bmb_krw_raw' not in st.session_state:
         st.session_state.bmb_krw_raw = "200,000"
         
@@ -85,7 +82,8 @@ with col2:
         
     bmb_krw_input = int(formatted_bmb_krw.replace(",", "")) if formatted_bmb_krw else 1000
     
-    movn_usdt = st.number_input("1 Movn 당 USDT 가격 (BSC 기반)", min_value=0.001, value=current_movn_usdt, format="%.4f", step=0.001)
+    # Movn 가격을 유니스왑 실시간 가격으로 자동 연동합니다.
+    movn_usdt = st.number_input("1 Movn 당 USDT 가격 (유니스왑 실시간)", min_value=0.001, value=current_movn_usdt, format="%.4f", step=0.001)
     bmb_movn_ratio = st.number_input("1 BMB 당 필요한 Movn 개수", min_value=0.1, value=132.2, step=0.1)
 
 info_text = f"테더: {current_usdt_krw}원 / 엘뱅크 BMB: {current_bmb_usdt} USDT / Movn: {current_movn_usdt:.4f} USDT"
